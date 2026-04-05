@@ -27,12 +27,17 @@ class NarrativeSynthesizer:
                 or os.environ.get("OPENAI_API_KEY")
                 or os.environ.get("CLAUDE_API_KEY")
             )
+        elif "groq" in model_lower:
+            self.api_key = os.environ.get("GROQ_API_KEY") or os.environ.get(
+                "OPENAI_API_KEY"
+            )
         else:
             self.api_key = (
                 os.environ.get("GEMINI_API_KEY")
                 or os.environ.get("OPENAI_API_KEY")
                 or os.environ.get("CLAUDE_API_KEY")
                 or os.environ.get("ANTHROPIC_API_KEY")
+                or os.environ.get("GROQ_API_KEY")
             )
 
     def synthesize(
@@ -51,18 +56,17 @@ class NarrativeSynthesizer:
             lineage_data, localized_comments, current_code, function_name
         )
 
-        prompt = f"""You are a senior software engineer investigating why a function exists in its current form.
-Your task is to write a brief (5 sentences max) explaining the decision history of this function.
+        prompt = f"""You are a code historian. Analyze this function's history and output 3 concise bullet points.
 
-The output should answer:
-1. What decisions shaped this code?
-2. What was tried and abandoned?
-3. What are the highest-risk assumptions baked into the current implementation?
+Focus on:
+- Key decisions that shaped this code
+- What changed and why
+- Current implementation notes
 
 Context:
 {context}
 
-Generate a concise 5-sentence brief:"""
+Output exactly 3 bullet points, no verbose explanations:"""
 
         try:
             response = litellm.completion(
@@ -84,22 +88,22 @@ Generate a concise 5-sentence brief:"""
         """Build context string from lineage and comments."""
 
         lines = []
-        lines.append(f"## Function: {function_name}\n")
-        lines.append(f"### Current Implementation:\n{current_code}\n")
+        lines.append(f"Function: {function_name}")
+        lines.append(f"Changed: {len(lineage_data)} times\n")
 
         if lineage_data:
-            lines.append("### Historical Versions:")
+            lines.append("History:")
             for i, entry in enumerate(lineage_data[:5]):
-                lines.append(f"\n--- Version {i + 1} ---")
-                lines.append(f"Commit: {entry.get('commit_hash', 'unknown')[:8]}")
-                lines.append(f"Change type: {entry.get('change_type', 'unknown')}")
-                lines.append(f"Code:\n{entry.get('content', '')}")
+                change_type = entry.get("change_type", "unknown")
+                commit = entry.get("commit_hash", "unknown")[:8]
+                msg = entry.get("commit_message", "").split("\n")[0][:60]
+                lines.append(f"- {change_type}: {commit} - {msg}")
 
         if localized_comments:
-            lines.append("\n### Relevant Review Comments:")
-            for comment in localized_comments[:10]:
+            lines.append("\nPR Comments:")
+            for comment in localized_comments[:3]:
                 lines.append(
-                    f"- [{comment.get('author', 'unknown')}]: {comment.get('body', '')}"
+                    f"- {comment.get('author', '?')}: {comment.get('body', '')[:80]}"
                 )
 
         return "\n".join(lines)

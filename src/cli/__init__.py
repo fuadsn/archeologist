@@ -175,6 +175,12 @@ def cli(ctx):
     ctx.obj["GEMINI_API_KEY"] = config.get("gemini_api_key") or os.environ.get(
         "GEMINI_API_KEY"
     )
+    ctx.obj["OPENAI_API_KEY"] = config.get("openai_api_key") or os.environ.get(
+        "OPENAI_API_KEY"
+    )
+    ctx.obj["GROQ_API_KEY"] = config.get("groq_api_key") or os.environ.get(
+        "GROQ_API_KEY"
+    )
     ctx.obj["MODEL"] = config.get("model") or os.environ.get(
         "ARC_MODEL", "gemini/gemini-2.0-flash"
     )
@@ -346,6 +352,7 @@ def analyze_function(
         ctx.obj.get("GEMINI_API_KEY")
         or ctx.obj.get("CLAUDE_API_KEY")
         or ctx.obj.get("OPENAI_API_KEY")
+        or ctx.obj.get("GROQ_API_KEY")
     )
 
     synthesizer = NarrativeSynthesizer(model=model)
@@ -798,6 +805,9 @@ def validate():
     )
     click.echo(
         f"  OPENAI_API_KEY: {'set' if os.environ.get('OPENAI_API_KEY') else 'not set'}"
+    )
+    click.echo(
+        f"  GROQ_API_KEY: {'set' if os.environ.get('GROQ_API_KEY') else 'not set'}"
     )
     click.echo(
         f"  CLAUDE_API_KEY: {'set' if os.environ.get('CLAUDE_API_KEY') else 'not set'}"
