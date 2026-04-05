@@ -172,6 +172,12 @@ def cli(ctx):
         or os.environ.get("CLAUDE_API_KEY")
         or os.environ.get("ANTHROPIC_API_KEY")
     )
+    ctx.obj["GEMINI_API_KEY"] = config.get("gemini_api_key") or os.environ.get(
+        "GEMINI_API_KEY"
+    )
+    ctx.obj["MODEL"] = config.get("model") or os.environ.get(
+        "ARC_MODEL", "gemini/gemini-2.0-flash"
+    )
     ctx.obj["VERBOSE"] = config.get("verbose") or os.environ.get(
         "ARC_VERBOSE", ""
     ).lower() in ("1", "true", "yes")
@@ -271,7 +277,7 @@ def analyze(
 
     if output_format == "text":
         click.echo(
-            "\nTo get full narrative, set CLAUDE_API_KEY and run with LLM synthesis."
+            "\nTo get full narrative, set GEMINI_API_KEY, OPENAI_API_KEY, or CLAUDE_API_KEY."
         )
 
 
@@ -335,7 +341,14 @@ def analyze_function(
     if ctx.obj.get("GITHUB_TOKEN") and repo:
         pr_fetcher = PRFetcher(ctx.obj["GITHUB_TOKEN"])
 
-    synthesizer = NarrativeSynthesizer()
+    model = ctx.obj.get("MODEL", "gemini/gemini-2.0-flash")
+    api_key = (
+        ctx.obj.get("GEMINI_API_KEY")
+        or ctx.obj.get("CLAUDE_API_KEY")
+        or ctx.obj.get("OPENAI_API_KEY")
+    )
+
+    synthesizer = NarrativeSynthesizer(model=model)
 
     lineage_data = []
     for edge in edges[:10]:
@@ -354,7 +367,7 @@ def analyze_function(
             if pr and (verbose or ctx.obj.get("VERBOSE")):
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
 
-    if ctx.obj.get("CLAUDE_API_KEY"):
+    if api_key:
         narrative = synthesizer.synthesize(lineage_data, [], "", function_name)
     else:
         narrative = synthesizer.synthesize_simple(lineage_data, [])
@@ -385,8 +398,10 @@ def analyze_function(
     else:
         click.echo(output_str)
 
-    if output_format == "text" and not ctx.obj.get("CLAUDE_API_KEY"):
-        click.echo("\nSet CLAUDE_API_KEY for full narrative synthesis.")
+    if output_format == "text" and not api_key:
+        click.echo(
+            "\nSet GEMINI_API_KEY, OPENAI_API_KEY, or CLAUDE_API_KEY for full narrative."
+        )
 
 
 @cli.command()
@@ -774,8 +789,15 @@ def validate():
     click.echo(f"  ARC_MAX_COMMITS: {os.environ.get('ARC_MAX_COMMITS', 'not set')}")
     click.echo(f"  ARC_FORMAT: {os.environ.get('ARC_FORMAT', 'not set')}")
     click.echo(f"  ARC_VERBOSE: {os.environ.get('ARC_VERBOSE', 'not set')}")
+    click.echo(f"  ARC_MODEL: {os.environ.get('ARC_MODEL', 'not set')}")
     click.echo(
         f"  GITHUB_TOKEN: {'set' if os.environ.get('GITHUB_TOKEN') else 'not set'}"
+    )
+    click.echo(
+        f"  GEMINI_API_KEY: {'set' if os.environ.get('GEMINI_API_KEY') else 'not set'}"
+    )
+    click.echo(
+        f"  OPENAI_API_KEY: {'set' if os.environ.get('OPENAI_API_KEY') else 'not set'}"
     )
     click.echo(
         f"  CLAUDE_API_KEY: {'set' if os.environ.get('CLAUDE_API_KEY') else 'not set'}"
