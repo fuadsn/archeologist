@@ -56,17 +56,21 @@ class NarrativeSynthesizer:
             lineage_data, localized_comments, current_code, function_name
         )
 
-        prompt = f"""You are a code historian. Analyze this function's history and output 3 concise bullet points.
+        prompt = f"""Analyze this function's git history and provide:
 
-Focus on:
-- Key decisions that shaped this code
-- What changed and why
-- Current implementation notes
+1. WHO made changes (authors)
+2. WHY changes were made (PR context, commit messages)  
+3. KEY changes summarized
+
+Use this format exactly:
+WHO: <list of authors>
+WHY: <what PRs/reasons drove changes>
+SUMMARY: <3-line max summary of key evolution>
 
 Context:
 {context}
 
-Output exactly 3 bullet points, no verbose explanations:"""
+Be specific - use actual commit hashes, PR numbers, author names."""
 
         try:
             response = litellm.completion(
@@ -92,18 +96,19 @@ Output exactly 3 bullet points, no verbose explanations:"""
         lines.append(f"Changed: {len(lineage_data)} times\n")
 
         if lineage_data:
-            lines.append("History:")
-            for i, entry in enumerate(lineage_data[:5]):
-                change_type = entry.get("change_type", "unknown")
+            lines.append("VERSIONS:")
+            for i, entry in enumerate(lineage_data[:8]):
                 commit = entry.get("commit_hash", "unknown")[:8]
-                msg = entry.get("commit_message", "").split("\n")[0][:60]
-                lines.append(f"- {change_type}: {commit} - {msg}")
+                change_type = entry.get("change_type", "unknown")
+                msg = entry.get("commit_message", "").split("\n")[0][:80]
+                lines.append(f"{i + 1}. {change_type} @ {commit}")
+                lines.append(f"   {msg}")
 
         if localized_comments:
-            lines.append("\nPR Comments:")
-            for comment in localized_comments[:3]:
+            lines.append("\nPR COMMENTS:")
+            for comment in localized_comments[:5]:
                 lines.append(
-                    f"- {comment.get('author', '?')}: {comment.get('body', '')[:80]}"
+                    f"- {comment.get('author', '?')}: {comment.get('body', '')[:100]}"
                 )
 
         return "\n".join(lines)

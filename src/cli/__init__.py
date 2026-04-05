@@ -18,14 +18,12 @@ try:
     from ..ast.lineage import LineageTracker
     from ..github.fetcher import PRFetcher
     from ..github.geographic import GeographicFilter
-    from ..synthesis.narrative import NarrativeSynthesizer
 except ImportError:
     from src.git.walker import GitWalker
     from src.ast.parser import ASTParser
     from src.ast.lineage import LineageTracker
     from src.github.fetcher import PRFetcher
     from src.github.geographic import GeographicFilter
-    from src.synthesis.narrative import NarrativeSynthesizer
 
 
 CONFIG_VERSION = "0.1.0"
@@ -243,8 +241,6 @@ def analyze(
     if ctx.obj.get("GITHUB_TOKEN") and repo:
         pr_fetcher = PRFetcher(ctx.obj["GITHUB_TOKEN"])
 
-    synthesizer = NarrativeSynthesizer()
-
     lineage_data = []
     for edge in edges[:10]:
         lineage_data.append(
@@ -262,7 +258,7 @@ def analyze(
             if pr and (verbose or ctx.obj.get("VERBOSE")):
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
 
-    summary = synthesizer.synthesize_simple(lineage_data, [])
+    summary = f"Found {len(lineage_data)} changes: {', '.join(set(e['change_type'] for e in lineage_data))}"
 
     result = {
         "file": resolved_path,
@@ -347,18 +343,19 @@ def analyze_function(
     if ctx.obj.get("GITHUB_TOKEN") and repo:
         pr_fetcher = PRFetcher(ctx.obj["GITHUB_TOKEN"])
 
-    model = ctx.obj.get("MODEL", "gemini/gemini-2.0-flash")
-    api_key = (
-        ctx.obj.get("GEMINI_API_KEY")
-        or ctx.obj.get("CLAUDE_API_KEY")
-        or ctx.obj.get("OPENAI_API_KEY")
-        or ctx.obj.get("GROQ_API_KEY")
-    )
-
-    synthesizer = NarrativeSynthesizer(model=model)
-
     lineage_data = []
+    commit_details = []
     for edge in edges[:10]:
+        commit = edge.commit_hash[:8] if edge.commit_hash else ""
+
+        commit_info = {
+            "hash": commit,
+            "message": (edge.commit_message or "").split("\n")[0],
+            "type": edge.change_type,
+            "confidence": round(edge.confidence, 2),
+        }
+        commit_details.append(commit_info)
+
         lineage_data.append(
             {
                 "change_type": edge.change_type,
@@ -374,27 +371,13 @@ def analyze_function(
             if pr and (verbose or ctx.obj.get("VERBOSE")):
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
 
-    if api_key:
-        narrative = synthesizer.synthesize(lineage_data, [], "", function_name)
-    else:
-        narrative = synthesizer.synthesize_simple(lineage_data, [])
-
     result = {
         "function": function_name,
         "file": resolved_path,
         "repo": repo_path,
         "language": language,
         "lineage_edges": len(edges),
-        "narrative": narrative,
-        "changes": [
-            {
-                "type": e.change_type,
-                "confidence": round(e.confidence, 2),
-                "commit": e.commit_hash[:8] if e.commit_hash else "",
-                "message": (e.commit_message or "").split("\n")[0],
-            }
-            for e in edges[:10]
-        ],
+        "commits": commit_details,
     }
 
     output_str = _format_output(result, output_format)
@@ -404,11 +387,6 @@ def analyze_function(
         click.echo(f"Output saved to {output}")
     else:
         click.echo(output_str)
-
-    if output_format == "text" and not api_key:
-        click.echo(
-            "\nSet GEMINI_API_KEY, OPENAI_API_KEY, or CLAUDE_API_KEY for full narrative."
-        )
 
 
 @cli.command()
