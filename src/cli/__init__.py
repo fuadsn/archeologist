@@ -504,5 +504,250 @@ def search(
         click.echo(output_str)
 
 
+@cli.command()
+@click.argument("repo_path", type=click.Path(exists=True), default=".")
+def stats(repo_path: str):
+    """Show repository statistics."""
+    repo_path = str(Path(repo_path).resolve())
+    git = GitWalker(repo_path)
+    ast = ASTParser()
+
+    extensions = {
+        ".py",
+        ".js",
+        ".ts",
+        ".tsx",
+        ".go",
+        ".rs",
+        ".java",
+        ".c",
+        ".cpp",
+        ".rb",
+        ".php",
+    }
+    file_counts = {}
+    function_counts = {}
+
+    click.echo(f"Analyzing repository: {repo_path}")
+
+    for path in Path(repo_path).rglob("*"):
+        if path.suffix not in extensions or ".git" in str(path):
+            continue
+        try:
+            lang = ast.detect_language(str(path)) or "unknown"
+            file_counts[lang] = file_counts.get(lang, 0) + 1
+
+            content = path.read_text()
+            tree = ast.parse_file(content, lang)
+            if tree:
+                nodes = ast.extract_nodes(tree, lang)
+                for node in nodes:
+                    if node.node_type in (
+                        "function_definition",
+                        "function_declaration",
+                        "function_item",
+                        "method",
+                        "def",
+                    ):
+                        function_counts[lang] = function_counts.get(lang, 0) + 1
+        except Exception:
+            continue
+
+    commits = git.get_commits_for_file(".", max_count=1000)
+
+    result = {
+        "repo": repo_path,
+        "files_by_language": file_counts,
+        "functions_by_language": function_counts,
+        "total_files": sum(file_counts.values()),
+        "total_functions": sum(function_counts.values()),
+        "commit_count": len(commits),
+    }
+
+    click.echo(f"\nRepository Statistics:")
+    click.echo(f"  Total files: {result['total_files']}")
+    click.echo(f"  Total functions: {result['total_functions']}")
+    click.echo(f"  Total commits: {result['commit_count']}")
+    click.echo(f"\nFiles by language:")
+    for lang, count in sorted(file_counts.items(), key=lambda x: -x[1]):
+        click.echo(f"  {lang}: {count}")
+
+
+@cli.command()
+@click.argument("file_path", type=click.Path(exists=True))
+@click.argument("function_name", required=False)
+@click.option("--max-commits", "-n", default=50, type=int, help="Max commits to show")
+@click.option(
+    "--format",
+    "-f",
+    "output_format",
+    type=click.Choice(["text", "json", "table"]),
+    default=None,
+    help="Output format",
+)
+def history(
+    file_path: str,
+    function_name: Optional[str],
+    max_commits: int,
+    output_format: Optional[str],
+):
+    """Show commit history for a file or function."""
+    output_format = output_format or config.get("format", "text")
+    resolved_path = str(Path(file_path).resolve())
+    repo_path = _find_git_repo(resolved_path)
+    relative_path = Path(resolved_path).relative_to(repo_path)
+
+    git = GitWalker(repo_path)
+    commits = git.get_commits_for_file(str(relative_path), max_count=max_commits)
+
+    if function_name:
+        ast = ASTParser()
+        lang = ast.detect_language(resolved_path) or "python"
+
+        history = []
+        for commit in commits:
+            content = git.get_file_at_commit(commit.hash, str(relative_path))
+            if content:
+                tree = ast.parse_file(content, lang)
+                if tree:
+                    node = ast.find_node_by_name(tree, lang, function_name)
+                    if node:
+                        history.append(
+                            {
+                                "commit": commit.hash[:8],
+                                "date": commit.date,
+                                "author": commit.author,
+                                "message": commit.message.split("\n")[0],
+                                "line": node.start_line,
+                            }
+                        )
+
+        result = {"function": function_name, "file": resolved_path, "history": history}
+    else:
+        result = {
+            "file": resolved_path,
+            "commits": [
+                {
+                    "hash": c.hash[:8],
+                    "date": c.date,
+                    "author": c.author,
+                    "message": c.message.split("\n")[0],
+                }
+                for c in commits
+            ],
+        }
+
+    output_str = _format_output(result, output_format)
+    click.echo(output_str)
+
+
+@cli.command()
+@click.argument("commit_hash")
+@click.argument("file_path", type=click.Path(exists=True))
+def diff(commit_hash: str, file_path: str):
+    """Show diff for a specific commit and file."""
+    resolved_path = str(Path(file_path).resolve())
+    repo_path = _find_git_repo(resolved_path)
+    relative_path = str(Path(resolved_path).relative_to(repo_path))
+
+    git = GitWalker(repo_path)
+
+    parent = git.get_commit_parent(commit_hash)
+    if not parent:
+        click.echo("Error: Cannot get parent commit", err=True)
+        return
+
+    diffs = git.get_diff_for_commit(commit_hash, relative_path, parent)
+
+    if not diffs:
+        click.echo("No diff found for this commit.")
+        return
+
+    click.echo(f"Diff for {relative_path} at {commit_hash[:8]}:\n")
+
+    for diff in diffs:
+        click.echo(
+            f"@@ -{diff.old_start},{diff.old_lines} +{diff.new_start},{diff.new_lines} @@"
+        )
+        click.echo(f"  Added: {len(diff.added_lines)} lines")
+        click.echo(f"  Deleted: {len(diff.deleted_lines)} lines")
+
+
+@cli.command()
+@click.argument("path", type=click.Path(), default=".")
+def init(path: str):
+    """Initialize config file in current directory."""
+    config_path = Path(path) / ".arc.yaml"
+
+    if config_path.exists():
+        click.echo(f"Config file already exists: {config_path}", err=True)
+        return
+
+    template = """# Arc - Code Archaeologist Configuration
+# https://github.com/yourusername/archeologist
+
+# GitHub personal access token (for PR integration)
+# github_token: ghp_xxx
+
+# Claude API key (for narrative synthesis)
+# claude_api_key: sk-ant-xxx
+
+# Default max commits to analyze
+max_commits: 100
+
+# Default output format (text, json, table)
+format: text
+
+# Enable verbose output
+verbose: false
+"""
+
+    config_path.write_text(template)
+    click.echo(f"Created config file: {config_path}")
+    click.echo("\nEdit the config file to add your API keys.")
+
+
+@cli.command()
+def validate():
+    """Validate config file."""
+    config_paths = [
+        Path.cwd() / ".arc.yaml",
+        Path.cwd() / ".arc.yml",
+        Path.home() / ".arc.yaml",
+        Path.home() / ".arc.yml",
+    ]
+
+    found = False
+    for path in config_paths:
+        if path.exists() and path.is_file():
+            found = True
+            try:
+                import yaml
+
+                data = yaml.safe_load(path.read_text())
+                click.echo(f"✓ Config valid: {path}")
+                click.echo(f"  Keys: {list(data.keys()) if data else 'none'}")
+            except ImportError:
+                click.echo(
+                    f"✓ Config file exists: {path} (yaml not installed, can't validate)"
+                )
+            except Exception as e:
+                click.echo(f"✗ Config error: {path}: {e}", err=True)
+
+    if not found:
+        click.echo("No config file found. Run 'arc init' to create one.")
+
+    click.echo(f"\nEnvironment variables:")
+    click.echo(f"  ARC_MAX_COMMITS: {os.environ.get('ARC_MAX_COMMITS', 'not set')}")
+    click.echo(f"  ARC_FORMAT: {os.environ.get('ARC_FORMAT', 'not set')}")
+    click.echo(f"  ARC_VERBOSE: {os.environ.get('ARC_VERBOSE', 'not set')}")
+    click.echo(
+        f"  GITHUB_TOKEN: {'set' if os.environ.get('GITHUB_TOKEN') else 'not set'}"
+    )
+    click.echo(
+        f"  CLAUDE_API_KEY: {'set' if os.environ.get('CLAUDE_API_KEY') else 'not set'}"
+    )
+
+
 if __name__ == "__main__":
     cli()
