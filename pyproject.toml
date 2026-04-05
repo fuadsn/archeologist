@@ -1,0 +1,31 @@
+[project]
+name = "archeologist"
+version = "0.1.0"
+description = "Post-incident archaeology tool that reconstructs function decision history via deterministic AST-aware lineage tracking"
+readme = "README.md"
+requires-python = ">=3.9"
+dependencies = [
+    "GitPython",
+    "PyGithub",
+    "tree-sitter",
+    "tree-sitter-languages",
+    "litellm",
+    "click",
+    "pytest",
+]
+
+[project.scripts]
+arc = "src.cli:cli"
+
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = ["test_*.py"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["src*"]
+
