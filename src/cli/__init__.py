@@ -161,6 +161,16 @@ def _show_progress(current: int, total: int, message: str = ""):
 @click.version_option(version=CONFIG_VERSION, prog_name="arc")
 def cli(ctx):
     """Arc - Code archaeologist. Reconstruct function decision history."""
+    import sys
+
+    if (
+        "--version" in sys.argv
+        or "-v" in sys.argv
+        or "--help" in sys.argv
+        or "-h" in sys.argv
+    ):
+        return
+
     ctx.ensure_object(dict)
     ctx.obj["GITHUB_TOKEN"] = config.get("github_token") or os.environ.get(
         "GITHUB_TOKEN"
