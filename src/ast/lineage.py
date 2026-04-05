@@ -14,6 +14,8 @@ class LineageEdge:
     confidence: float
     commit_hash: str = ""
     commit_message: str = ""
+    author: str = ""
+    date: str = ""
 
 
 class LineageTracker:
@@ -67,6 +69,8 @@ class LineageTracker:
                 if edge:
                     edge.commit_hash = commit.hash
                     edge.commit_message = commit.message
+                    edge.author = commit.author
+                    edge.date = commit.date
                     edges.append(edge)
 
             previous_node = current_node

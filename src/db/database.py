@@ -32,6 +32,10 @@ CREATE TABLE IF NOT EXISTS lineage_edges (
     child_node_id TEXT,
     change_type TEXT,
     confidence REAL,
+    commit_hash TEXT,
+    commit_message TEXT,
+    author TEXT,
+    date TEXT,
     FOREIGN KEY (parent_node_id) REFERENCES ast_nodes(node_id),
     FOREIGN KEY (child_node_id) REFERENCES ast_nodes(node_id),
     PRIMARY KEY (parent_node_id, child_node_id)
@@ -135,13 +139,17 @@ class Database:
         with self.get_connection() as conn:
             conn.execute(
                 """INSERT OR REPLACE INTO lineage_edges 
-                   (parent_node_id, child_node_id, change_type, confidence)
-                   VALUES (?, ?, ?, ?)""",
+                   (parent_node_id, child_node_id, change_type, confidence, commit_hash, commit_message, author, date)
+                   VALUES (?, ?, ?, ?, ?, ?, ?, ?)""",
                 (
                     edge_data["parent_node_id"],
                     edge_data["child_node_id"],
                     edge_data["change_type"],
                     edge_data["confidence"],
+                    edge_data.get("commit_hash", ""),
+                    edge_data.get("commit_message", ""),
+                    edge_data.get("author", ""),
+                    edge_data.get("date", ""),
                 ),
             )
             conn.commit()

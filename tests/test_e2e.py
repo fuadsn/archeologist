@@ -181,6 +181,10 @@ def test_full_lineage_with_pr_context(temp_repo):
                     "child_node_id": edge.child_node_id,
                     "change_type": edge.change_type,
                     "confidence": edge.confidence,
+                    "commit_hash": edge.commit_hash,
+                    "commit_message": edge.commit_message,
+                    "author": edge.author,
+                    "date": edge.date,
                 }
             )
 
@@ -188,9 +192,9 @@ def test_full_lineage_with_pr_context(temp_repo):
         assert len(edges_from_db) >= 1
 
 
-def test_cli_analyze_function_integration(temp_repo):
-    """Test CLI analyze-function command end-to-end."""
-    from src.cli import _find_git_repo
+def test_mcp_analyze_function_integration(temp_repo):
+    """Test MCP analyze-function method end-to-end."""
+    from src.mcp.server import MCPServer
     from src.git.walker import GitWalker
     from src.ast.parser import ASTParser
     from src.ast.lineage import LineageTracker
@@ -223,5 +227,6 @@ def goodbye():
     assert "hello" in func_names
     assert "goodbye" in func_names
 
-    repo_path = _find_git_repo(str(file_path))
+    mcp_methods = MCPServer().methods
+    repo_path = mcp_methods._find_git_repo(str(file_path))
     assert repo_path == temp_repo

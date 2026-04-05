@@ -399,6 +399,10 @@ class MCPMethods:
                     "child_node_id": edge.child_node_id,
                     "change_type": edge.change_type,
                     "confidence": edge.confidence,
+                    "commit_hash": edge.commit_hash,
+                    "commit_message": edge.commit_message,
+                    "author": edge.author,
+                    "date": edge.date,
                 }
             )
 
