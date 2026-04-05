@@ -97,6 +97,16 @@ class GitWalker:
 
         return hunks
 
+    def get_commit_parent(self, commit_hash: str) -> Optional[str]:
+        """Get the parent commit hash for a given commit."""
+        try:
+            commit = self.repo.commit(commit_hash)
+            if commit.parents:
+                return commit.parents[0].hexsha
+        except Exception:
+            pass
+        return None
+
     def _parse_diff(self, diff_output: str) -> list[DiffHunk]:
         """Parse unified diff output into structured hunks."""
         if not diff_output:
@@ -127,10 +137,47 @@ class GitWalker:
                 if len(match) >= 2:
                     old_info = match[0].split()
                     new_info = match[1].split()
-                    old_start = int(old_info[0].lstrip("-"))
-                    old_lines = int(old_info[1].lstrip(",+"))
-                    new_start = int(new_info[0].lstrip("+"))
-                    new_lines = int(new_info[1].lstrip(",+"))
+
+                    try:
+                        old_start = 1
+                        old_lines = 1
+                        new_start = 1
+                        new_lines = 1
+
+                        if old_info:
+                            old_start_str = old_info[0].lstrip("-")
+                            old_start = (
+                                int(old_start_str.split(",")[0])
+                                if old_start_str.isdigit()
+                                else 1
+                            )
+                        if len(old_info) > 1:
+                            old_lines_str = old_info[1].lstrip(",+")
+                            old_lines = (
+                                int(old_lines_str.split(",")[0])
+                                if old_lines_str.isdigit()
+                                else 1
+                            )
+
+                        if new_info:
+                            new_start_str = new_info[0].lstrip("+")
+                            new_start = (
+                                int(new_start_str.split(",")[0])
+                                if new_start_str.isdigit()
+                                else 1
+                            )
+                        if len(new_info) > 1:
+                            new_lines_str = new_info[1].lstrip(",+")
+                            new_lines = (
+                                int(new_lines_str.split(",")[0])
+                                if new_lines_str.isdigit()
+                                else 1
+                            )
+                    except (ValueError, IndexError):
+                        old_start = 1
+                        old_lines = 1
+                        new_start = 1
+                        new_lines = 1
 
                 deleted_lines = []
                 added_lines = []

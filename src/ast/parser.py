@@ -101,12 +101,22 @@ class ASTParser:
     def parse_file(self, content: str, language: str) -> Optional[Tree]:
         """Parse file content and return AST tree."""
         lang_key = self._get_lang_key(language)
-        if lang_key not in self.parsers:
+        short_key = self._get_short_key(language)
+        if short_key not in self.parsers:
             return None
         try:
-            return self.parsers[lang_key].parse(content.encode("utf-8"))
+            return self.parsers[short_key].parse(content.encode("utf-8"))
         except Exception:
             return None
+
+    def _get_short_key(self, language: str) -> str:
+        """Get short language key for parser lookup."""
+        if language in self.parsers:
+            return language
+        for short, full in LANGUAGE_MAP.items():
+            if full == language:
+                return short
+        return language
 
     def extract_nodes(
         self, tree: Tree, language: str, node_types: Optional[list[str]] = None
@@ -114,9 +124,14 @@ class ASTParser:
         """Extract all function/class nodes from AST."""
         if node_types is None:
             lang_key = self._get_lang_key(language)
+            short_key = self._get_short_key(language)
             node_types = FUNCTION_NODE_TYPES.get(lang_key, []) + CLASS_NODE_TYPES.get(
                 lang_key, []
             )
+            if not node_types:
+                node_types = FUNCTION_NODE_TYPES.get(
+                    short_key, []
+                ) + CLASS_NODE_TYPES.get(short_key, [])
 
         nodes = []
         root = tree.root_node

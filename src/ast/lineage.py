@@ -29,6 +29,8 @@ class LineageTracker:
         if not commits:
             return []
 
+        commits = list(reversed(commits))
+
         edges = []
         previous_node = None
         previous_content = None
@@ -48,9 +50,6 @@ class LineageTracker:
                 continue
 
             if previous_node and previous_content and previous_start_line is not None:
-                parent_id = f"{previous_node.node_id}_{commit.parent_hashes[0] if commit.parent_hashes else 'init'}"
-                child_id = f"{current_node.node_id}_{commit.hash}"
-
                 edge = self._detect_edge_type(
                     previous_content,
                     current_node.content,
@@ -58,8 +57,8 @@ class LineageTracker:
                     current_node.start_line,
                     previous_node.name,
                     current_node.name,
-                    parent_id,
-                    child_id,
+                    previous_node.node_id,
+                    current_node.node_id,
                     commit.hash,
                     file_path,
                 )
@@ -91,13 +90,15 @@ class LineageTracker:
         if tier1:
             return tier1
 
-        diffs = self.git.get_diff_for_commit(commit_hash, file_path)
-        if diffs:
-            tier2 = self._tier2_physical(
-                old_start_line, new_start_line, diffs, parent_id, child_id
-            )
-            if tier2:
-                return tier2
+        parent_commit = self.git.get_commit_parent(commit_hash)
+        if parent_commit:
+            diffs = self.git.get_diff_for_commit(commit_hash, file_path, parent_commit)
+            if diffs:
+                tier2 = self._tier2_physical(
+                    old_start_line, new_start_line, diffs, parent_id, child_id
+                )
+                if tier2:
+                    return tier2
 
         tier3 = self._tier3_signature(
             old_name, new_name, old_content, new_content, parent_id, child_id
