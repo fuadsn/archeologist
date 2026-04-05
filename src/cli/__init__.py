@@ -249,13 +249,15 @@ def analyze(
                 "confidence": edge.confidence,
                 "commit_hash": edge.commit_hash,
                 "commit_message": edge.commit_message,
+                "author": edge.author,
+                "date": edge.date,
             }
         )
         if pr_fetcher and repo:
             pr = pr_fetcher.get_pr_from_commit(
                 repo, edge.commit_hash, edge.commit_message
             )
-            if pr and (verbose or ctx.obj.get("VERBOSE")):
+            if pr:
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
 
     summary = f"Found {len(lineage_data)} changes: {', '.join(set(e['change_type'] for e in lineage_data))}"
@@ -269,18 +271,24 @@ def analyze(
         "changes": lineage_data[:10],
     }
 
-    output_str = _format_output(result, output_format)
-
-    if output:
-        Path(output).write_text(output_str)
-        click.echo(f"Output saved to {output}")
-    else:
-        click.echo(output_str)
-
-    if output_format == "text":
+    click.echo(f"=== FILE ANALYSIS ===")
+    click.echo(f"File: {resolved_path}")
+    click.echo(f"Repository: {repo_path}")
+    click.echo(f"Language: {language}")
+    click.echo(f"Total lineage edges: {len(edges)}")
+    click.echo(f"")
+    click.echo(f"=== LINEAGE CHANGES ===")
+    for i, edge in enumerate(lineage_data, 1):
+        click.echo(f"[{i}] Change Type: {edge['change_type']}")
+        click.echo(f"    Confidence: {edge['confidence']:.2f}")
         click.echo(
-            "\nTo get full narrative, set GEMINI_API_KEY, OPENAI_API_KEY, or CLAUDE_API_KEY."
+            f"    Commit Hash: {edge['commit_hash'][:8] if edge['commit_hash'] else 'N/A'}"
         )
+        click.echo(f"    Author: {edge['author'] or 'N/A'}")
+        click.echo(f"    Date: {edge['date'] or 'N/A'}")
+        msg = edge["commit_message"] or "No message"
+        click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
+        click.echo(f"")
 
 
 @cli.command()
@@ -353,6 +361,8 @@ def analyze_function(
             "message": (edge.commit_message or "").split("\n")[0],
             "type": edge.change_type,
             "confidence": round(edge.confidence, 2),
+            "author": edge.author,
+            "date": edge.date,
         }
         commit_details.append(commit_info)
 
@@ -362,31 +372,36 @@ def analyze_function(
                 "confidence": edge.confidence,
                 "commit_hash": edge.commit_hash,
                 "commit_message": edge.commit_message,
+                "author": edge.author,
+                "date": edge.date,
             }
         )
         if pr_fetcher and repo:
             pr = pr_fetcher.get_pr_from_commit(
                 repo, edge.commit_hash, edge.commit_message
             )
-            if pr and (verbose or ctx.obj.get("VERBOSE")):
+            if pr:
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
 
-    result = {
-        "function": function_name,
-        "file": resolved_path,
-        "repo": repo_path,
-        "language": language,
-        "lineage_edges": len(edges),
-        "commits": commit_details,
-    }
-
-    output_str = _format_output(result, output_format)
-
-    if output:
-        Path(output).write_text(output_str)
-        click.echo(f"Output saved to {output}")
-    else:
-        click.echo(output_str)
+    click.echo(f"=== FUNCTION ANALYSIS ===")
+    click.echo(f"Function: {function_name}")
+    click.echo(f"File: {resolved_path}")
+    click.echo(f"Repository: {repo_path}")
+    click.echo(f"Language: {language}")
+    click.echo(f"Total lineage edges: {len(edges)}")
+    click.echo(f"")
+    click.echo(f"=== LINEAGE CHANGES ===")
+    for i, edge in enumerate(lineage_data, 1):
+        click.echo(f"[{i}] Change Type: {edge['change_type']}")
+        click.echo(f"    Confidence: {edge['confidence']:.2f}")
+        click.echo(
+            f"    Commit Hash: {edge['commit_hash'][:8] if edge['commit_hash'] else 'N/A'}"
+        )
+        click.echo(f"    Author: {edge['author'] or 'N/A'}")
+        click.echo(f"    Date: {edge['date'] or 'N/A'}")
+        msg = edge["commit_message"] or "No message"
+        click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
+        click.echo(f"")
 
 
 @cli.command()
@@ -528,13 +543,16 @@ def search(
         "count": len(results),
     }
 
-    output_str = _format_output(result, output_format)
-
-    if output:
-        Path(output).write_text(output_str)
-        click.echo(f"Output saved to {output}")
-    else:
-        click.echo(output_str)
+    click.echo(f"=== SEARCH RESULTS ===")
+    click.echo(f"Function: {function_name}")
+    click.echo(f"Repository: {repo_path}")
+    click.echo(f"Total matches: {len(results)}")
+    click.echo(f"")
+    for i, match in enumerate(results, 1):
+        click.echo(f"[{i}] File: {match['file']}")
+        click.echo(f"    Line: {match['line']}")
+        click.echo(f"    Type: {match['type']}")
+        click.echo(f"")
 
 
 @cli.command()
@@ -656,6 +674,19 @@ def history(
                         )
 
         result = {"function": function_name, "file": resolved_path, "history": history}
+        click.echo(f"=== FUNCTION HISTORY ===")
+        click.echo(f"Function: {function_name}")
+        click.echo(f"File: {resolved_path}")
+        click.echo(f"Total commits: {len(history)}")
+        click.echo(f"")
+        click.echo(f"=== COMMIT HISTORY ===")
+        for i, h in enumerate(history, 1):
+            click.echo(f"[{i}] Commit: {h['commit']}")
+            click.echo(f"    Date: {h['date']}")
+            click.echo(f"    Author: {h['author']}")
+            click.echo(f"    Line: {h['line']}")
+            click.echo(f"    Message: {h['message'][:80]}")
+            click.echo(f"")
     else:
         result = {
             "file": resolved_path,
@@ -669,9 +700,17 @@ def history(
                 for c in commits
             ],
         }
-
-    output_str = _format_output(result, output_format)
-    click.echo(output_str)
+        click.echo(f"=== FILE HISTORY ===")
+        click.echo(f"File: {resolved_path}")
+        click.echo(f"Total commits: {len(commits)}")
+        click.echo(f"")
+        click.echo(f"=== COMMIT HISTORY ===")
+        for i, c in enumerate(commits, 1):
+            click.echo(f"[{i}] Commit: {c.hash[:8]}")
+            click.echo(f"    Date: {c.date}")
+            click.echo(f"    Author: {c.author}")
+            click.echo(f"    Message: {c.message.split(chr(10))[0][:80]}")
+            click.echo(f"")
 
 
 @cli.command()
