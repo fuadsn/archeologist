@@ -12,10 +12,12 @@ dependencies = [
     "litellm",
     "click",
     "pytest",
+    "modelcontextprotocol",
 ]
 
 [project.scripts]
 arc = "src.cli:cli"
+arc-mcp = "src.mcp.server:run_mcp_server"
 
 [build-system]
 requires = ["setuptools>=61.0"]
@@ -28,4 +30,3 @@ python_files = ["test_*.py"]
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["src*"]
-
