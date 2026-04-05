@@ -241,75 +241,32 @@ def analyze(
     if ctx.obj.get("GITHUB_TOKEN") and repo:
         pr_fetcher = PRFetcher(ctx.obj["GITHUB_TOKEN"])
 
-    lineage_data = []
+    changes = []
     for edge in edges[:10]:
-        lineage_data.append(
-            {
-                "change_type": edge.change_type,
-                "confidence": edge.confidence,
-                "commit_hash": edge.commit_hash,
-                "commit_message": edge.commit_message,
-                "author": edge.author,
-                "date": edge.date,
-            }
-        )
-        if pr_fetcher and repo:
-            pr = pr_fetcher.get_pr_from_commit(
-                repo, edge.commit_hash, edge.commit_message
-            )
-            if pr:
-                click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
-                if pr.body:
-                    click.echo(f"    PR Body: {pr.body[:200]}...", err=True)
-                if pr.reviewers:
-                    click.echo(f"    Reviewers: {', '.join(pr.reviewers)}", err=True)
-                if pr.labels:
-                    click.echo(f"    Labels: {', '.join(pr.labels)}", err=True)
-                click.echo(f"    Files changed: {pr.changed_files[:5]}", err=True)
-                click.echo(
-                    f"    Additions: {pr.additions}, Deletions: {pr.deletions}",
-                    err=True,
-                )
+        parent_hash = git.get_commit_parent(edge.commit_hash)
+        full_diff = git.get_full_diff(edge.commit_hash, str(relative_path), parent_hash)
 
-    parent_chain = []
-    if edges:
-        parent_chain = (
-            git.get_commit_chain(edges[0].commit_hash) if edges[0].commit_hash else []
-        )
-
-    summary = f"Found {len(lineage_data)} changes: {', '.join(set(e['change_type'] for e in lineage_data))}"
+        change = {
+            "change_type": edge.change_type,
+            "confidence": edge.confidence,
+            "commit_hash": edge.commit_hash,
+            "commit_message": edge.commit_message,
+            "author": edge.author,
+            "date": edge.date,
+            "diff": full_diff,
+        }
+        changes.append(change)
 
     result = {
-        "file": resolved_path,
+        "file": str(relative_path),
+        "function": relative_path.stem,
         "repo": repo_path,
         "language": language,
         "lineage_edges": len(edges),
-        "summary": summary,
-        "changes": lineage_data[:10],
+        "changes": changes,
     }
 
-    click.echo(f"=== FILE ANALYSIS ===")
-    click.echo(f"File: {resolved_path}")
-    click.echo(f"Repository: {repo_path}")
-    click.echo(f"Language: {language}")
-    click.echo(f"Total lineage edges: {len(edges)}")
-    click.echo(f"Commit parent chain depth: {len(parent_chain)}")
-    click.echo(f"")
-    click.echo(f"=== LINEAGE CHANGES ===")
-    for i, edge in enumerate(lineage_data, 1):
-        click.echo(f"[{i}] Change Type: {edge['change_type']}")
-        click.echo(f"    Confidence: {edge['confidence']:.2f}")
-        click.echo(
-            f"    Commit Hash: {edge['commit_hash'][:8] if edge['commit_hash'] else 'N/A'}"
-        )
-        click.echo(f"    Author: {edge['author'] or 'N/A'}")
-        click.echo(f"    Date: {edge['date'] or 'N/A'}")
-        msg = edge["commit_message"] or "No message"
-        click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
-        chain = git.get_commit_chain(edge["commit_hash"]) if edge["commit_hash"] else []
-        if chain:
-            click.echo(f"    Parent commits: {', '.join([c[:8] for c in chain[:3]])}")
-        click.echo(f"")
+    click.echo(json.dumps(result, indent=2))
 
 
 @cli.command()
@@ -372,78 +329,32 @@ def analyze_function(
     if ctx.obj.get("GITHUB_TOKEN") and repo:
         pr_fetcher = PRFetcher(ctx.obj["GITHUB_TOKEN"])
 
-    lineage_data = []
-    commit_details = []
+    changes = []
     for edge in edges[:10]:
-        commit = edge.commit_hash[:8] if edge.commit_hash else ""
+        parent_hash = git.get_commit_parent(edge.commit_hash)
+        full_diff = git.get_full_diff(edge.commit_hash, str(relative_path), parent_hash)
 
-        commit_info = {
-            "hash": commit,
-            "message": (edge.commit_message or "").split("\n")[0],
-            "type": edge.change_type,
-            "confidence": round(edge.confidence, 2),
+        change = {
+            "change_type": edge.change_type,
+            "confidence": edge.confidence,
+            "commit_hash": edge.commit_hash,
+            "commit_message": edge.commit_message,
             "author": edge.author,
             "date": edge.date,
+            "diff": full_diff,
         }
-        commit_details.append(commit_info)
+        changes.append(change)
 
-        lineage_data.append(
-            {
-                "change_type": edge.change_type,
-                "confidence": edge.confidence,
-                "commit_hash": edge.commit_hash,
-                "commit_message": edge.commit_message,
-                "author": edge.author,
-                "date": edge.date,
-            }
-        )
-        if pr_fetcher and repo:
-            pr = pr_fetcher.get_pr_from_commit(
-                repo, edge.commit_hash, edge.commit_message
-            )
-            if pr:
-                click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
-                if pr.body:
-                    click.echo(f"    PR Body: {pr.body[:200]}...", err=True)
-                if pr.reviewers:
-                    click.echo(f"    Reviewers: {', '.join(pr.reviewers)}", err=True)
-                if pr.labels:
-                    click.echo(f"    Labels: {', '.join(pr.labels)}", err=True)
-                click.echo(f"    Files changed: {pr.changed_files[:5]}", err=True)
-                click.echo(
-                    f"    Additions: {pr.additions}, Deletions: {pr.deletions}",
-                    err=True,
-                )
+    result = {
+        "file": str(relative_path),
+        "function": function_name,
+        "repo": repo_path,
+        "language": language,
+        "lineage_edges": len(edges),
+        "changes": changes,
+    }
 
-    parent_chain = []
-    if edges:
-        parent_chain = (
-            git.get_commit_chain(edges[0].commit_hash) if edges[0].commit_hash else []
-        )
-
-    click.echo(f"=== FUNCTION ANALYSIS ===")
-    click.echo(f"Function: {function_name}")
-    click.echo(f"File: {resolved_path}")
-    click.echo(f"Repository: {repo_path}")
-    click.echo(f"Language: {language}")
-    click.echo(f"Total lineage edges: {len(edges)}")
-    click.echo(f"Commit parent chain depth: {len(parent_chain)}")
-    click.echo(f"")
-    click.echo(f"=== LINEAGE CHANGES ===")
-    for i, edge in enumerate(lineage_data, 1):
-        click.echo(f"[{i}] Change Type: {edge['change_type']}")
-        click.echo(f"    Confidence: {edge['confidence']:.2f}")
-        click.echo(
-            f"    Commit Hash: {edge['commit_hash'][:8] if edge['commit_hash'] else 'N/A'}"
-        )
-        click.echo(f"    Author: {edge['author'] or 'N/A'}")
-        click.echo(f"    Date: {edge['date'] or 'N/A'}")
-        msg = edge["commit_message"] or "No message"
-        click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
-        chain = git.get_commit_chain(edge["commit_hash"]) if edge["commit_hash"] else []
-        if chain:
-            click.echo(f"    Parent commits: {', '.join([c[:8] for c in chain[:3]])}")
-        click.echo(f"")
+    click.echo(json.dumps(result, indent=2))
 
 
 @cli.command()
@@ -585,16 +496,7 @@ def search(
         "count": len(results),
     }
 
-    click.echo(f"=== SEARCH RESULTS ===")
-    click.echo(f"Function: {function_name}")
-    click.echo(f"Repository: {repo_path}")
-    click.echo(f"Total matches: {len(results)}")
-    click.echo(f"")
-    for i, match in enumerate(results, 1):
-        click.echo(f"[{i}] File: {match['file']}")
-        click.echo(f"    Line: {match['line']}")
-        click.echo(f"    Type: {match['type']}")
-        click.echo(f"")
+    click.echo(json.dumps(result, indent=2))
 
 
 @cli.command()
@@ -670,22 +572,12 @@ def stats(repo_path: str):
 @click.argument("file_path", type=click.Path(exists=True))
 @click.argument("function_name", required=False)
 @click.option("--max-commits", "-n", default=50, type=int, help="Max commits to show")
-@click.option(
-    "--format",
-    "-f",
-    "output_format",
-    type=click.Choice(["text", "json", "table"]),
-    default=None,
-    help="Output format",
-)
 def history(
     file_path: str,
     function_name: Optional[str],
     max_commits: int,
-    output_format: Optional[str],
 ):
-    """Show commit history for a file or function."""
-    output_format = output_format or config.get("format", "text")
+    """Show commit history for a file or function with diffs."""
     resolved_path = str(Path(file_path).resolve())
     repo_path = _find_git_repo(resolved_path)
     relative_path = Path(resolved_path).relative_to(repo_path)
@@ -693,66 +585,29 @@ def history(
     git = GitWalker(repo_path)
     commits = git.get_commits_for_file(str(relative_path), max_count=max_commits)
 
-    if function_name:
-        ast = ASTParser()
-        lang = ast.detect_language(resolved_path) or "python"
+    history = []
+    for commit in commits:
+        parent_hash = git.get_commit_parent(commit.hash)
+        full_diff = git.get_full_diff(commit.hash, str(relative_path), parent_hash)
 
-        history = []
-        for commit in commits:
-            content = git.get_file_at_commit(commit.hash, str(relative_path))
-            if content:
-                tree = ast.parse_file(content, lang)
-                if tree:
-                    node = ast.find_node_by_name(tree, lang, function_name)
-                    if node:
-                        history.append(
-                            {
-                                "commit": commit.hash[:8],
-                                "date": commit.date,
-                                "author": commit.author,
-                                "message": commit.message.split("\n")[0],
-                                "line": node.start_line,
-                            }
-                        )
+        history.append(
+            {
+                "commit_hash": commit.hash,
+                "commit_message": commit.message,
+                "author": commit.author,
+                "date": commit.date,
+                "diff": full_diff,
+            }
+        )
 
-        result = {"function": function_name, "file": resolved_path, "history": history}
-        click.echo(f"=== FUNCTION HISTORY ===")
-        click.echo(f"Function: {function_name}")
-        click.echo(f"File: {resolved_path}")
-        click.echo(f"Total commits: {len(history)}")
-        click.echo(f"")
-        click.echo(f"=== COMMIT HISTORY ===")
-        for i, h in enumerate(history, 1):
-            click.echo(f"[{i}] Commit: {h['commit']}")
-            click.echo(f"    Date: {h['date']}")
-            click.echo(f"    Author: {h['author']}")
-            click.echo(f"    Line: {h['line']}")
-            click.echo(f"    Message: {h['message'][:80]}")
-            click.echo(f"")
-    else:
-        result = {
-            "file": resolved_path,
-            "commits": [
-                {
-                    "hash": c.hash[:8],
-                    "date": c.date,
-                    "author": c.author,
-                    "message": c.message.split("\n")[0],
-                }
-                for c in commits
-            ],
-        }
-        click.echo(f"=== FILE HISTORY ===")
-        click.echo(f"File: {resolved_path}")
-        click.echo(f"Total commits: {len(commits)}")
-        click.echo(f"")
-        click.echo(f"=== COMMIT HISTORY ===")
-        for i, c in enumerate(commits, 1):
-            click.echo(f"[{i}] Commit: {c.hash[:8]}")
-            click.echo(f"    Date: {c.date}")
-            click.echo(f"    Author: {c.author}")
-            click.echo(f"    Message: {c.message.split(chr(10))[0][:80]}")
-            click.echo(f"")
+    result = {
+        "file": str(relative_path),
+        "function": function_name,
+        "repo": repo_path,
+        "history": history,
+    }
+
+    click.echo(json.dumps(result, indent=2))
 
 
 @cli.command()

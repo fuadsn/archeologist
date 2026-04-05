@@ -97,6 +97,21 @@ class GitWalker:
 
         return hunks
 
+    def get_full_diff(
+        self, commit_hash: str, file_path: str, parent_hash: Optional[str] = None
+    ) -> str:
+        """Get full diff text for a specific commit and file."""
+        git = self.repo.git()
+        try:
+            if parent_hash:
+                return git.diff(
+                    "--no-renames", parent_hash, commit_hash, "--", file_path
+                )
+            else:
+                return git.diff("--no-renames", commit_hash, "--", file_path)
+        except GitCommandError:
+            return ""
+
     def get_commit_parent(self, commit_hash: str) -> Optional[str]:
         """Get the parent commit hash for a given commit."""
         try:
