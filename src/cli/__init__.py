@@ -31,7 +31,7 @@ except ImportError:
     from src.github.geographic import GeographicFilter
 
 
-CONFIG_VERSION = "0.1.1"
+CONFIG_VERSION = "0.1.2"
 
 
 class Config:
@@ -170,7 +170,12 @@ def print_version(ctx, param, value):
 @click.group()
 @click.pass_context
 @click.option(
-    "--version", is_flag=True, is_eager=True, callback=print_version, expose_value=False
+    "--version",
+    "-v",
+    is_flag=True,
+    is_eager=True,
+    callback=print_version,
+    expose_value=False,
 )
 def cli(ctx):
     """Arc - Code archaeologist. Reconstruct function decision history."""
