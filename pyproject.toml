@@ -16,6 +16,7 @@ dependencies = [
 ]
 
 [project.scripts]
+arc = "src.cli:cli"
 arc-mcp = "src.mcp.server:main"
 
 [build-system]
