@@ -18,6 +18,12 @@ class PR:
     created_at: str
     merged_at: Optional[str]
     is_reverted: bool
+    reviewers: list[str]
+    labels: list[str]
+    changed_files: list[str]
+    commits_count: int
+    additions: int
+    deletions: int
 
 
 @dataclass
@@ -70,6 +76,16 @@ class PRFetcher:
             repo = self.github.get_repo(repo_name)
             pr = repo.get_pull(pr_number)
 
+            reviewers = (
+                [r.user.login for r in pr.get_reviews()] if pr.get_reviews() else []
+            )
+            labels = [label.name for label in pr.labels] if pr.labels else []
+            files = [f.filename for f in pr.get_files()] if pr.get_files() else []
+
+            stats = pr.as_dict()
+            additions = stats.get("additions", 0)
+            deletions = stats.get("deletions", 0)
+
             return PR(
                 number=pr.number,
                 repo_name=repo_name,
@@ -79,6 +95,12 @@ class PRFetcher:
                 created_at=pr.created_at.isoformat(),
                 merged_at=pr.merged_at.isoformat() if pr.merged_at else None,
                 is_reverted=self._check_if_reverted(pr, repo),
+                reviewers=reviewers,
+                labels=labels,
+                changed_files=files,
+                commits_count=pr.commits,
+                additions=additions,
+                deletions=deletions,
             )
         except Exception:
             return None

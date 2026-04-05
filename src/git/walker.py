@@ -264,3 +264,61 @@ class GitWalker:
     def compute_content_hash(content: str) -> str:
         """Compute deterministic hash of code content."""
         return hashlib.sha256(content.encode("utf-8")).hexdigest()
+
+    def get_commit_chain(self, commit_hash: str, max_depth: int = 50) -> list[str]:
+        """Get full parent chain for a commit."""
+        chain = []
+        try:
+            commit = self.repo.commit(commit_hash)
+            for parent in commit.parents:
+                chain.append(parent.hexsha)
+                if len(chain) >= max_depth:
+                    break
+        except Exception:
+            pass
+        return chain
+
+    def get_blame_for_file(self, file_path: str) -> list[dict]:
+        """Get blame data for a file (line-level authorship)."""
+        blame_data = []
+        try:
+            git = self.repo.git()
+            output = git.blame("--line-porcelain", "--", file_path)
+
+            current_commit = None
+            current_author = None
+            current_author_mail = None
+            current_date = None
+            current_line = None
+
+            for line in output.split("\n"):
+                if line.startswith("author "):
+                    current_author = line[7:]
+                elif line.startswith("author-mail "):
+                    current_author_mail = line[12:]
+                elif line.startswith("author-time "):
+                    current_date = line[12:]
+                elif line.startswith("committer "):
+                    pass
+                elif line.startswith("\t"):
+                    current_line = line[1:]
+                    if current_commit and current_author and current_date:
+                        blame_data.append(
+                            {
+                                "commit": current_commit,
+                                "author": current_author,
+                                "author_email": current_author_mail,
+                                "date": current_date,
+                                "content": current_line,
+                            }
+                        )
+                elif line.startswith("filename "):
+                    pass
+                elif line.startswith("    "):
+                    pass
+                else:
+                    if line and not line.startswith("summary "):
+                        current_commit = line
+        except Exception:
+            pass
+        return blame_data

@@ -259,6 +259,23 @@ def analyze(
             )
             if pr:
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
+                if pr.body:
+                    click.echo(f"    PR Body: {pr.body[:200]}...", err=True)
+                if pr.reviewers:
+                    click.echo(f"    Reviewers: {', '.join(pr.reviewers)}", err=True)
+                if pr.labels:
+                    click.echo(f"    Labels: {', '.join(pr.labels)}", err=True)
+                click.echo(f"    Files changed: {pr.changed_files[:5]}", err=True)
+                click.echo(
+                    f"    Additions: {pr.additions}, Deletions: {pr.deletions}",
+                    err=True,
+                )
+
+    parent_chain = []
+    if edges:
+        parent_chain = (
+            git.get_commit_chain(edges[0].commit_hash) if edges[0].commit_hash else []
+        )
 
     summary = f"Found {len(lineage_data)} changes: {', '.join(set(e['change_type'] for e in lineage_data))}"
 
@@ -276,6 +293,7 @@ def analyze(
     click.echo(f"Repository: {repo_path}")
     click.echo(f"Language: {language}")
     click.echo(f"Total lineage edges: {len(edges)}")
+    click.echo(f"Commit parent chain depth: {len(parent_chain)}")
     click.echo(f"")
     click.echo(f"=== LINEAGE CHANGES ===")
     for i, edge in enumerate(lineage_data, 1):
@@ -288,6 +306,9 @@ def analyze(
         click.echo(f"    Date: {edge['date'] or 'N/A'}")
         msg = edge["commit_message"] or "No message"
         click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
+        chain = git.get_commit_chain(edge["commit_hash"]) if edge["commit_hash"] else []
+        if chain:
+            click.echo(f"    Parent commits: {', '.join([c[:8] for c in chain[:3]])}")
         click.echo(f"")
 
 
@@ -382,6 +403,23 @@ def analyze_function(
             )
             if pr:
                 click.echo(f"  PR #{pr.number}: {pr.title}", err=True)
+                if pr.body:
+                    click.echo(f"    PR Body: {pr.body[:200]}...", err=True)
+                if pr.reviewers:
+                    click.echo(f"    Reviewers: {', '.join(pr.reviewers)}", err=True)
+                if pr.labels:
+                    click.echo(f"    Labels: {', '.join(pr.labels)}", err=True)
+                click.echo(f"    Files changed: {pr.changed_files[:5]}", err=True)
+                click.echo(
+                    f"    Additions: {pr.additions}, Deletions: {pr.deletions}",
+                    err=True,
+                )
+
+    parent_chain = []
+    if edges:
+        parent_chain = (
+            git.get_commit_chain(edges[0].commit_hash) if edges[0].commit_hash else []
+        )
 
     click.echo(f"=== FUNCTION ANALYSIS ===")
     click.echo(f"Function: {function_name}")
@@ -389,6 +427,7 @@ def analyze_function(
     click.echo(f"Repository: {repo_path}")
     click.echo(f"Language: {language}")
     click.echo(f"Total lineage edges: {len(edges)}")
+    click.echo(f"Commit parent chain depth: {len(parent_chain)}")
     click.echo(f"")
     click.echo(f"=== LINEAGE CHANGES ===")
     for i, edge in enumerate(lineage_data, 1):
@@ -401,6 +440,9 @@ def analyze_function(
         click.echo(f"    Date: {edge['date'] or 'N/A'}")
         msg = edge["commit_message"] or "No message"
         click.echo(f"    Message: {msg.split(chr(10))[0][:80]}")
+        chain = git.get_commit_chain(edge["commit_hash"]) if edge["commit_hash"] else []
+        if chain:
+            click.echo(f"    Parent commits: {', '.join([c[:8] for c in chain[:3]])}")
         click.echo(f"")
 
 
