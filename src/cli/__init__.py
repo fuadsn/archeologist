@@ -6,6 +6,13 @@ from pathlib import Path
 from typing import Optional, Any
 
 try:
+    from dotenv import load_dotenv
+
+    load_dotenv()
+except ImportError:
+    pass
+
+try:
     from ..git.walker import GitWalker
     from ..ast.parser import ASTParser
     from ..ast.lineage import LineageTracker
@@ -33,6 +40,32 @@ class Config:
 
     def _load(self):
         """Load config from file and environment."""
+        # Try to load .env file if it exists
+        env_paths = [
+            Path.cwd() / ".env",
+            Path.home() / ".env",
+        ]
+
+        for env_path in env_paths:
+            if env_path.exists() and env_path.is_file():
+                try:
+                    from dotenv import load_dotenv
+
+                    load_dotenv(env_path)
+                    click.echo(f"Loaded .env from {env_path}", err=True)
+                except ImportError:
+                    # Fallback: manually parse .env
+                    for line in env_path.read_text().splitlines():
+                        line = line.strip()
+                        if line and not line.startswith("#"):
+                            if "=" in line:
+                                key, value = line.split("=", 1)
+                                key = key.strip()
+                                value = value.strip().strip('"').strip("'")
+                                if key and value and not os.environ.get(key):
+                                    os.environ[key] = value
+
+        # Load YAML config
         config_paths = [
             Path.cwd() / ".arc.yaml",
             Path.cwd() / ".arc.yml",

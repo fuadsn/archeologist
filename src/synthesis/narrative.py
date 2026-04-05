@@ -6,11 +6,34 @@ import litellm
 class NarrativeSynthesizer:
     """Synthesize narrative from lineage chain and localized comments using LLM."""
 
-    def __init__(self, model: str = "claude-3-haiku-20240307"):
+    def __init__(self, model: str = None):
+        if model is None:
+            model = os.environ.get("ARC_MODEL", "gemini/gemini-2.0-flash")
         self.model = model
-        self.api_key = os.environ.get("CLAUDE_API_KEY") or os.environ.get(
-            "ANTHROPIC_API_KEY"
-        )
+
+        model_lower = model.lower()
+
+        if "openai" in model_lower:
+            self.api_key = os.environ.get("OPENAI_API_KEY") or os.environ.get(
+                "CLAUDE_API_KEY"
+            )
+        elif "claude" in model_lower or "anthropic" in model_lower:
+            self.api_key = os.environ.get("CLAUDE_API_KEY") or os.environ.get(
+                "ANTHROPIC_API_KEY"
+            )
+        elif "gemini" in model_lower:
+            self.api_key = (
+                os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+                or os.environ.get("CLAUDE_API_KEY")
+            )
+        else:
+            self.api_key = (
+                os.environ.get("GEMINI_API_KEY")
+                or os.environ.get("OPENAI_API_KEY")
+                or os.environ.get("CLAUDE_API_KEY")
+                or os.environ.get("ANTHROPIC_API_KEY")
+            )
 
     def synthesize(
         self,
@@ -22,7 +45,7 @@ class NarrativeSynthesizer:
         """Generate a 5-sentence brief explaining what shaped this code."""
 
         if not self.api_key:
-            return "Error: CLAUDE_API_KEY not set. Please set your API key to generate narrative."
+            return "Error: No API key set. Set GEMINI_API_KEY, OPENAI_API_KEY, or CLAUDE_API_KEY."
 
         context = self._build_context(
             lineage_data, localized_comments, current_code, function_name
