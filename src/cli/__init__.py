@@ -1,6 +1,11 @@
+import warnings
+
+warnings.filterwarnings("ignore", category=Warning)
+
 import os
 import sys
 import json
+
 import click
 from pathlib import Path
 from typing import Optional, Any
