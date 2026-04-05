@@ -346,14 +346,16 @@ def analyze_function(
 
         node_content = git.get_file_at_commit(edge.commit_hash, str(relative_path))
         function_diff = full_diff
-        if node_content:
+        if node_content and full_diff:
             tree = ast.parse_file(node_content, language)
             if tree:
                 node = ast.find_node_by_name(tree, language, function_name)
                 if node:
-                    function_diff = git.filter_diff_to_function(
+                    filtered = git.filter_diff_to_function(
                         full_diff, node.start_line, node.end_line
                     )
+                    if filtered:
+                        function_diff = filtered
 
         change = {
             "commit_hash": edge.commit_hash,

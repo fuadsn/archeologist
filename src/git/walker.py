@@ -102,15 +102,30 @@ class GitWalker:
     ) -> str:
         """Get full diff text for a specific commit and file."""
         git = self.repo.git()
+        diff_result = ""
+
         try:
             if parent_hash:
-                return git.diff(
+                diff_result = git.diff(
                     "--no-renames", parent_hash, commit_hash, "--", file_path
                 )
             else:
-                return git.diff("--no-renames", commit_hash, "--", file_path)
-        except GitCommandError:
-            return ""
+                diff_result = git.diff("--no-renames", commit_hash, "--", file_path)
+        except Exception:
+            pass
+
+        if not diff_result:
+            content = self.get_file_at_commit(commit_hash, file_path)
+            if content:
+                diff_result = (
+                    f"diff --git a/{file_path} b/{file_path}\n"
+                    f"new file mode 100644\n"
+                    f"--- /dev/null\n"
+                    f"+++ b/{file_path}\n"
+                    + "\n".join(f"+{line}" for line in content.split("\n"))
+                )
+
+        return diff_result
 
     def get_commit_parent(self, commit_hash: str) -> Optional[str]:
         """Get the parent commit hash for a given commit."""
