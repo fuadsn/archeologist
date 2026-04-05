@@ -246,6 +246,18 @@ def analyze(
         parent_hash = git.get_commit_parent(edge.commit_hash)
         full_diff = git.get_full_diff(edge.commit_hash, str(relative_path), parent_hash)
 
+        func_name = relative_path.stem
+        node_content = git.get_file_at_commit(edge.commit_hash, str(relative_path))
+        function_diff = full_diff
+        if node_content:
+            tree = ast.parse_file(node_content, language)
+            if tree:
+                node = ast.find_node_by_name(tree, language, func_name)
+                if node:
+                    function_diff = git.filter_diff_to_function(
+                        full_diff, node.start_line, node.end_line
+                    )
+
         change = {
             "change_type": edge.change_type,
             "confidence": edge.confidence,
@@ -253,7 +265,7 @@ def analyze(
             "commit_message": edge.commit_message,
             "author": edge.author,
             "date": edge.date,
-            "diff": full_diff,
+            "diff": function_diff,
         }
         changes.append(change)
 

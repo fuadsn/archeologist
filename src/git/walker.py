@@ -122,6 +122,50 @@ class GitWalker:
             pass
         return None
 
+    def filter_diff_to_function(
+        self, diff_output: str, start_line: int, end_line: int
+    ) -> str:
+        """Filter a diff to only include changes within a function's line range."""
+        if not diff_output:
+            return ""
+
+        lines = diff_output.split("\n")
+        filtered_lines = []
+        in_relevant_hunk = False
+
+        for line in lines:
+            if line.startswith("@@"):
+                old_start, old_lines = 0, 0
+                new_start, new_lines = 0, 0
+
+                match = line[4:].rstrip(" ").split("@@")
+                if len(match) >= 2:
+                    try:
+                        old_parts = match[0].lstrip("-").split(",")
+                        new_parts = match[1].lstrip("+").split(",")
+                        old_start = int(old_parts[0])
+                        new_start = int(new_parts[0])
+                        old_lines = int(old_parts[1]) if len(old_parts) > 1 else 1
+                        new_lines = int(new_parts[1]) if len(new_parts) > 1 else 1
+                    except (ValueError, IndexError):
+                        pass
+
+                old_end = old_start + old_lines - 1
+                new_end = new_start + new_lines - 1
+
+                old_overlaps = (old_start <= end_line) and (old_end >= start_line)
+                new_overlaps = (new_start <= end_line) and (new_end >= start_line)
+                in_relevant_hunk = old_overlaps or new_overlaps
+
+                if in_relevant_hunk:
+                    filtered_lines.append(line)
+                continue
+
+            if in_relevant_hunk:
+                filtered_lines.append(line)
+
+        return "\n".join(filtered_lines)
+
     def _parse_diff(self, diff_output: str) -> list[DiffHunk]:
         """Parse unified diff output into structured hunks."""
         if not diff_output:
