@@ -94,7 +94,6 @@ def foo():
     assert len(edges) >= 1
 
 
-@pytest.mark.skip(reason="Rename detection needs refinement")
 def test_signature_rename(temp_repo):
     """Test Tier 3: Content changes with same function name."""
     from src.git.walker import GitWalker
@@ -124,8 +123,7 @@ def test_signature_rename(temp_repo):
     ast = ASTParser()
     tracker = LineageTracker(git, ast)
 
-    edges = tracker.track_lineage("test.py", "foo", "python", max_commits=10)
-    print(f"DEBUG: edges = {edges}")
+    edges = tracker.track_lineage("test.py", "foo", "py", max_commits=10)
 
     assert len(edges) >= 1
 

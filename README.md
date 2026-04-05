@@ -8,11 +8,18 @@ Post-incident archaeology tool that reconstructs function decision history via d
 # Install
 pip install -e .
 
-# Analyze file
-arc analyze path/to/file.py --repo owner/repo
+# Analyze file (auto-detects git repo)
+arc analyze path/to/file.py
 
 # Analyze specific function  
+arc analyze-function path/to/file.py function_name
+
+# With GitHub PR integration
 arc analyze-function path/to/file.py function_name --repo owner/repo
+
+# With LLM narrative synthesis
+export CLAUDE_API_KEY=sk-ant-xxx
+arc analyze-function path/to/file.py function_name
 ```
 
 ## Configuration
@@ -31,7 +38,7 @@ Three-phase pipeline:
 
 1. **Semantic Lineage Tracking**
    - GitWalker traverses history (--no-renames flag)
-   - ASTParser extracts function boundaries (Python, JS, TS, Go, Rust)
+   - ASTParser extracts function boundaries (Python, JS, TS, Go, Rust, Java, C, C++, Ruby, PHP)
    - LineageTracker links nodes via four-tier hierarchy
 
 2. **Contextual Slicing**
@@ -44,11 +51,27 @@ Three-phase pipeline:
 
 ## MCP Server
 
-The tool can be exposed as an MCP server for AI agents. After installing:
+The tool exposes an MCP-compatible JSON-RPC 2.0 server over stdio:
 
 ```bash
-# Run MCP server (when MCP SDK available for Python 3.9)
+# Run MCP server
 arc-mcp
+
+# Or run directly
+python -m src.mcp.server
+```
+
+### Available Methods
+
+```json
+// List functions in a file
+{"jsonrpc": "2.0", "id": 1, "method": "list_functions", "params": {"file_path": "/path/to/file.py"}}
+
+// Analyze a specific function
+{"jsonrpc": "2.0", "id": 2, "method": "analyze_function", "params": {"file_path": "/path/to/file.py", "function_name": "foo"}}
+
+// Analyze a file's overall lineage
+{"jsonrpc": "2.0", "id": 3, "method": "analyze_file", "params": {"file_path": "/path/to/file.py"}}
 ```
 
 ## Example
@@ -83,10 +106,12 @@ pytest tests/
 
 ## Roadmap
 
-- [x] Day 1: Graph construction (GitWalker, ASTParser, LineageTracker)
-- [x] Day 2: Contextual slicing (PRFetcher, GeographicFilter)
-- [ ] Day 3: MCP server for AI agent integration
-- [ ] Real-world validation on open source repos
+- [x] Graph construction (GitWalker, ASTParser, LineageTracker)
+- [x] Contextual slicing (PRFetcher, GeographicFilter)
+- [x] CLI commands with local git repo auto-detection
+- [x] 10 language support (Python, JS, TS, Go, Rust, Java, C, C++, Ruby, PHP)
+- [x] Real-world testing on Flask repo
+- [x] MCP server (JSON-RPC 2.0 over stdio, works with Python 3.9)
 
 ## License
 

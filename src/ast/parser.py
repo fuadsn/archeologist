@@ -67,6 +67,14 @@ FUNCTION_NODE_TYPES = {
     "cpp": [
         "function_definition",
     ],
+    "ruby": [
+        "method",
+        "def",
+    ],
+    "php": [
+        "function_definition",
+        "method_declaration",
+    ],
 }
 
 
@@ -77,6 +85,10 @@ CLASS_NODE_TYPES = {
     "go": ["type_declaration"],
     "rust": ["struct_item", "impl_item"],
     "java": ["class_declaration", "interface_declaration"],
+    "c": ["struct_definition", "union_definition"],
+    "cpp": ["class_specifier", "struct_specifier"],
+    "ruby": ["class", "module"],
+    "php": ["class_declaration", "interface_declaration", "trait_declaration"],
 }
 
 
@@ -192,6 +204,18 @@ class ASTParser:
                         if isinstance(child_text, bytes)
                         else str(child_text)
                     )
+            if child.type == "name":
+                child_text = child.text
+                if child_text:
+                    return (
+                        child_text.decode("utf-8")
+                        if isinstance(child_text, bytes)
+                        else str(child_text)
+                    )
+        for child in node.children:
+            name = self._extract_node_name(child, language)
+            if name:
+                return name
         return None
 
     def find_node_by_name(

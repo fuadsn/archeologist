@@ -227,6 +227,26 @@ class Database:
             ).fetchall()
             return [dict(row) for row in rows]
 
+    def get_pr(self, pr_number: int, repo_name: str) -> Optional[dict]:
+        with self.get_connection() as conn:
+            row = conn.execute(
+                "SELECT * FROM prs WHERE pr_number = ? AND repo_name = ?",
+                (pr_number, repo_name),
+            ).fetchone()
+            return dict(row) if row else None
+
+    def get_localized_comments_for_node(self, node_id: str) -> list[dict]:
+        with self.get_connection() as conn:
+            rows = conn.execute(
+                "SELECT * FROM localized_comments WHERE node_id = ?", (node_id,)
+            ).fetchall()
+            return [dict(row) for row in rows]
+
+    def get_lineage_edges(self) -> list[dict]:
+        with self.get_connection() as conn:
+            rows = conn.execute("SELECT * FROM lineage_edges").fetchall()
+            return [dict(row) for row in rows]
+
     def clear_all(self):
         with self.get_connection() as conn:
             conn.execute("DELETE FROM localized_comments")

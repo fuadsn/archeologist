@@ -7,17 +7,16 @@ requires-python = ">=3.9"
 dependencies = [
     "GitPython",
     "PyGithub",
-    "tree-sitter",
-    "tree-sitter-languages",
+    "tree-sitter>=0.21.0",
+    "tree-sitter-languages>=1.9.0",
     "litellm",
     "click",
     "pytest",
-    "modelcontextprotocol",
 ]
 
 [project.scripts]
 arc = "src.cli:cli"
-arc-mcp = "src.mcp.server:run_mcp_server"
+arc-mcp = "src.mcp.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]

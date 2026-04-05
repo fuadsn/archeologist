@@ -32,10 +32,7 @@ class GeographicFilter:
         localized = []
 
         for comment in comments:
-            if not comment.path:
-                continue
-
-            if comment.line == 0:
+            if comment.line == 0 or not comment.path:
                 localized.append(
                     LocalizedComment(
                         comment_id=comment.comment_id,

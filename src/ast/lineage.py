@@ -12,6 +12,8 @@ class LineageEdge:
     child_node_id: str
     change_type: str
     confidence: float
+    commit_hash: str = ""
+    commit_message: str = ""
 
 
 class LineageTracker:
@@ -63,6 +65,8 @@ class LineageTracker:
                     file_path,
                 )
                 if edge:
+                    edge.commit_hash = commit.hash
+                    edge.commit_message = commit.message
                     edges.append(edge)
 
             previous_node = current_node
@@ -175,7 +179,7 @@ class LineageTracker:
             overlap = self._jaccard_similarity(
                 set(old_content.split()), set(new_content.split())
             )
-            if 0.5 <= overlap < 0.7:
+            if 0.5 <= overlap:
                 return LineageEdge(
                     parent_node_id=parent_id,
                     child_node_id=child_id,
@@ -191,7 +195,7 @@ class LineageTracker:
         overlap = self._jaccard_similarity(
             set(old_content.split()), set(new_content.split())
         )
-        if 0.5 <= overlap < 0.7:
+        if overlap >= 0.5:
             return LineageEdge(
                 parent_node_id=parent_id,
                 child_node_id=child_id,
