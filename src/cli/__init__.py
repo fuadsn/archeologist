@@ -278,7 +278,7 @@ def analyze(
         "changes": changes,
     }
 
-    click.echo(json.dumps(result, indent=2))
+    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @cli.command()
@@ -366,7 +366,7 @@ def analyze_function(
         "changes": changes,
     }
 
-    click.echo(json.dumps(result, indent=2))
+    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @cli.command()
@@ -508,7 +508,7 @@ def search(
         "count": len(results),
     }
 
-    click.echo(json.dumps(result, indent=2))
+    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @cli.command()
@@ -619,7 +619,7 @@ def history(
         "history": history,
     }
 
-    click.echo(json.dumps(result, indent=2))
+    click.echo(json.dumps(result, indent=2, ensure_ascii=False))
 
 
 @cli.command()
