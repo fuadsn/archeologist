@@ -1,7 +1,7 @@
 [project]
 name = "archeologist"
 version = "0.1.0"
-description = "Post-incident archaeology tool that reconstructs function decision history via deterministic AST-aware lineage tracking"
+description = "Code archaeologist - reconstruct function decision history via AST-aware lineage tracking"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
@@ -9,15 +9,14 @@ dependencies = [
     "PyGithub",
     "tree-sitter>=0.21.0",
     "tree-sitter-languages>=1.9.0",
-    "litellm",
     "click",
     "pytest",
     "python-dotenv",
+    "pyyaml",
 ]
 
 [project.scripts]
 arc = "src.cli:cli"
-arc-mcp = "src.mcp.server:main"
 
 [build-system]
 requires = ["setuptools>=61.0"]
