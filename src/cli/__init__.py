@@ -161,9 +161,17 @@ def _show_progress(current: int, total: int, message: str = ""):
         sys.stderr.write("\n")
 
 
+def print_version(ctx, param, value):
+    if value:
+        click.echo(CONFIG_VERSION)
+        ctx.exit()
+
+
 @click.group()
 @click.pass_context
-@click.version_option(version=CONFIG_VERSION, prog_name="arc")
+@click.option(
+    "--version", is_flag=True, is_eager=True, callback=print_version, expose_value=False
+)
 def cli(ctx):
     """Arc - Code archaeologist. Reconstruct function decision history."""
     import sys
