@@ -31,7 +31,7 @@ except ImportError:
     from src.github.geographic import GeographicFilter
 
 
-CONFIG_VERSION = "0.1.9"
+CONFIG_VERSION = "0.2.0"
 
 
 class Config:
@@ -432,6 +432,8 @@ def list_functions(file_path: str, output_format: Optional[str], output: Optiona
             "function_definition",
             "function_declaration",
             "function_item",
+            "function_expression",
+            "method_declaration",
             "method",
             "def",
         ):
@@ -580,6 +582,8 @@ def stats(repo_path: str):
                         "function_definition",
                         "function_declaration",
                         "function_item",
+                        "function_expression",
+                        "method_declaration",
                         "method",
                         "def",
                     ):
