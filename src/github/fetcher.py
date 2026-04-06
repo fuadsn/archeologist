@@ -72,6 +72,34 @@ class PRFetcher:
         if not pr_number:
             return None
 
+        repo = self.github.get_repo(repo_name)
+        pr = repo.get_pull(pr_number)
+
+        reviewers = [r.user.login for r in pr.get_reviews()] if pr.get_reviews() else []
+        labels = [label.name for label in pr.labels] if pr.labels else []
+        files = [f.filename for f in pr.get_files()] if pr.get_files() else []
+
+        return PR(
+            number=pr.number,
+            repo_name=repo_name,
+            title=pr.title,
+            body=pr.body or "",
+            author=pr.user.login,
+            created_at=pr.created_at.isoformat(),
+            merged_at=pr.merged_at.isoformat() if pr.merged_at else None,
+            is_reverted=self._check_if_reverted(pr, repo),
+            reviewers=reviewers,
+            labels=labels,
+            changed_files=files,
+            commits_count=pr.commits,
+            additions=pr.additions,
+            deletions=pr.deletions,
+        )
+
+        pr_number = self.extract_pr_number_from_commit_message(commit_message)
+        if not pr_number:
+            return None
+
         try:
             repo = self.github.get_repo(repo_name)
             pr = repo.get_pull(pr_number)
