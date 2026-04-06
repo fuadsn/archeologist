@@ -31,7 +31,6 @@ LANGUAGE_MAP = {
     "cpp": "cpp",
     "rb": "ruby",
     "php": "php",
-    "dart": "dart",
 }
 
 
@@ -76,11 +75,6 @@ FUNCTION_NODE_TYPES = {
         "function_definition",
         "method_declaration",
     ],
-    "dart": [
-        "method_declaration",
-        "function_expression",
-        "constructor",
-    ],
 }
 
 
@@ -106,36 +100,8 @@ class ASTParser:
     def _init_parsers(self):
         """Initialize tree-sitter parsers for all supported languages."""
         for short_lang, full_lang in LANGUAGE_MAP.items():
-            if short_lang == "dart":
-                self._init_dart_parser()
-            else:
-                try:
-                    self.parsers[short_lang] = tree_sitter_languages.get_parser(
-                        full_lang
-                    )
-                except Exception as e:
-                    pass
-
-    def _init_dart_parser(self):
-        """Initialize Dart parser, installing tree-sitter-dart if needed."""
-        try:
-            from tree_sitter_dart import language
-            from tree_sitter import Parser
-
-            self.parsers["dart"] = Parser(language)
-        except ImportError:
-            import subprocess
-            import sys
-
             try:
-                subprocess.check_call(
-                    [sys.executable, "-m", "pip", "install", "tree-sitter-dart"],
-                    stderr=subprocess.DEVNULL,
-                )
-                from tree_sitter_dart import language
-                from tree_sitter import Parser
-
-                self.parsers["dart"] = Parser(language)
+                self.parsers[short_lang] = tree_sitter_languages.get_parser(full_lang)
             except Exception:
                 pass
 

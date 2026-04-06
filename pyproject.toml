@@ -1,8 +1,6 @@
-version = "0.1.8"
-
 [project]
 name = "archeologist"
-version = "0.1.8"
+version = "0.1.9"
 description = "Code archaeologist - reconstruct function decision history via AST-aware lineage tracking"
 readme = "README.md"
 requires-python = ">=3.9"
