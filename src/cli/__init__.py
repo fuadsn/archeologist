@@ -31,7 +31,7 @@ except ImportError:
     from src.github.geographic import GeographicFilter
 
 
-CONFIG_VERSION = "0.1.5"
+CONFIG_VERSION = "0.1.6"
 
 
 class Config:
@@ -180,16 +180,6 @@ def print_version(ctx, param, value):
 @click.help_option("-h", "--help")
 def cli(ctx):
     """Arc - Code archaeologist. Reconstruct function decision history."""
-    import sys
-
-    if (
-        "--version" in sys.argv
-        or "-v" in sys.argv
-        or "--help" in sys.argv
-        or "-h" in sys.argv
-    ):
-        return
-
     ctx.ensure_object(dict)
     ctx.obj["GITHUB_TOKEN"] = config.get("github_token") or os.environ.get(
         "GITHUB_TOKEN"
@@ -336,7 +326,6 @@ def analyze_function(
     output: Optional[str],
     verbose: bool,
 ):
-    """Analyze a specific function and reconstruct its decision history."""
     max_commits = max_commits or config.get("max_commits", 100)
     output_format = output_format or config.get("format", "text")
 
