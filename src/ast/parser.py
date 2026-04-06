@@ -31,6 +31,7 @@ LANGUAGE_MAP = {
     "cpp": "cpp",
     "rb": "ruby",
     "php": "php",
+    "dart": "dart",
 }
 
 
@@ -75,6 +76,11 @@ FUNCTION_NODE_TYPES = {
         "function_definition",
         "method_declaration",
     ],
+    "dart": [
+        "method_declaration",
+        "function_expression",
+        "constructor",
+    ],
 }
 
 
@@ -100,10 +106,22 @@ class ASTParser:
     def _init_parsers(self):
         """Initialize tree-sitter parsers for all supported languages."""
         for short_lang, full_lang in LANGUAGE_MAP.items():
-            try:
-                self.parsers[short_lang] = tree_sitter_languages.get_parser(full_lang)
-            except Exception as e:
-                print(f"DEBUG: Failed to load {full_lang}: {e}")
+            if short_lang == "dart":
+                try:
+                    from tree_sitter_dart import language
+                    from tree_sitter import Parser
+
+                    parser = Parser(language)
+                    self.parsers[short_lang] = parser
+                except Exception as e:
+                    print(f"DEBUG: Failed to load dart: {e}")
+            else:
+                try:
+                    self.parsers[short_lang] = tree_sitter_languages.get_parser(
+                        full_lang
+                    )
+                except Exception as e:
+                    print(f"DEBUG: Failed to load {full_lang}: {e}")
 
     def detect_language(self, file_path: str) -> Optional[str]:
         """Detect language from file extension."""
