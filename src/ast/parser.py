@@ -195,6 +195,28 @@ class ASTParser:
 
     def _extract_node_name(self, node: Node, language: str) -> Optional[str]:
         """Extract function/class name from AST node."""
+        # For method_declaration (Go), children are: [func, receiver_params, method_name, params, return_type, body]
+        # Skip func keyword (index 0) and receiver parameters (index 1), get method name (index 2)
+        if node.type == "method_declaration":
+            if len(node.children) >= 3:
+                name_child = node.children[2]
+                if name_child.type == "field_identifier":
+                    child_text = name_child.text
+                    if child_text:
+                        return (
+                            child_text.decode("utf-8")
+                            if isinstance(child_text, bytes)
+                            else str(child_text)
+                        )
+                elif name_child.type in ("identifier", "name"):
+                    child_text = name_child.text
+                    if child_text:
+                        return (
+                            child_text.decode("utf-8")
+                            if isinstance(child_text, bytes)
+                            else str(child_text)
+                        )
+
         for child in node.children:
             if child.type == "identifier":
                 child_text = child.text
