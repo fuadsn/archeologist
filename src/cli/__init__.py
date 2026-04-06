@@ -31,7 +31,7 @@ except ImportError:
     from src.github.geographic import GeographicFilter
 
 
-CONFIG_VERSION = "0.1.7"
+CONFIG_VERSION = "0.1.8"
 
 
 class Config:

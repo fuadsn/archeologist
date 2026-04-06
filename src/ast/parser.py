@@ -107,21 +107,37 @@ class ASTParser:
         """Initialize tree-sitter parsers for all supported languages."""
         for short_lang, full_lang in LANGUAGE_MAP.items():
             if short_lang == "dart":
-                try:
-                    from tree_sitter_dart import language
-                    from tree_sitter import Parser
-
-                    parser = Parser(language)
-                    self.parsers[short_lang] = parser
-                except Exception as e:
-                    print(f"DEBUG: Failed to load dart: {e}")
+                self._init_dart_parser()
             else:
                 try:
                     self.parsers[short_lang] = tree_sitter_languages.get_parser(
                         full_lang
                     )
                 except Exception as e:
-                    print(f"DEBUG: Failed to load {full_lang}: {e}")
+                    pass
+
+    def _init_dart_parser(self):
+        """Initialize Dart parser, installing tree-sitter-dart if needed."""
+        try:
+            from tree_sitter_dart import language
+            from tree_sitter import Parser
+
+            self.parsers["dart"] = Parser(language)
+        except ImportError:
+            import subprocess
+            import sys
+
+            try:
+                subprocess.check_call(
+                    [sys.executable, "-m", "pip", "install", "tree-sitter-dart"],
+                    stderr=subprocess.DEVNULL,
+                )
+                from tree_sitter_dart import language
+                from tree_sitter import Parser
+
+                self.parsers["dart"] = Parser(language)
+            except Exception:
+                pass
 
     def detect_language(self, file_path: str) -> Optional[str]:
         """Detect language from file extension."""
